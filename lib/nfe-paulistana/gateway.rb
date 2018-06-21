@@ -69,12 +69,12 @@ module NfePaulistana
     private
 
     def certificate
-      OpenSSL::PKCS12.new(File.read(@options[:ssl_cert_p12_path]), @options[:ssl_cert_pass])
+      OpenSSL::PKCS12.new(File.read(@options[:ssl_cert_path]), @options[:ssl_cert_pass])
     end
 
     def request(method, data = {})
       certificado = certificate
-      client = get_client
+      client = get_client(certificado)
       message = XmlBuilder.new.xml_for(method, data, certificado)
       response = client.call(method, message: message)
       method_response = (method.to_s + "_response").to_sym
@@ -82,14 +82,16 @@ module NfePaulistana
     rescue Savon::Error
     end
 
-    def get_client
-      Savon.client(env_namespace: :soap,
+    def get_client(certificado)
+      Savon.client(
+                   env_namespace: :soap,
+                   soap_version: 2,
                    ssl_verify_mode: :peer, 
-                   ssl_cert_file: @options[:ssl_cert_path], 
-                   ssl_cert_key_file: @options[:ssl_key_path], 
-                   ssl_cert_key_password: @options[:ssl_cert_pass], 
-                   wsdl: @options[:wsdl], 
+                   wsdl: @options[:wsdl],
+                   ssl_cert_key: certificado.key,
+                   ssl_cert: certificado.certificate,
                    namespace_identifier: nil)
+
     end
   end
 end
